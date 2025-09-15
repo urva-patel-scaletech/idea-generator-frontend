@@ -279,32 +279,34 @@ export const RefineModal: React.FC<RefineModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className={`flex-1 px-6 pb-6 ${showChat ? 'overflow-y-hidden' : 'overflow-y-auto'} min-h-0 flex flex-col`}>
+        <div className={`flex-1 px-4 md:px-6 pb-6 md:pb-6 ${showChat ? 'overflow-y-hidden' : 'overflow-y-auto'} min-h-0 flex flex-col`}>
           <div className="max-w-4xl mx-auto h-full min-h-0 w-full flex flex-col">
             {!showChat && !selectedOption && (
-              <div className="space-y-4">
+              <div className="space-y-4 pb-20 md:pb-4">
                 <p className="text-gray-700 mb-3">Choose how you'd like to refine this idea:</p>
-                {refineOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => handleOptionSelect(option)}
-                    className="w-full p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-purple-200 transition-all text-left flex items-center gap-4"
-                  >
-                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-purple-50 text-purple-600">
-                      {getIcon(option.id)}
-                    </span>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{option.label}</div>
-                      <div className="text-xs text-gray-500">Generate focused guidance</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  </button>
-                ))}
+                <div className="space-y-3">
+                  {refineOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => handleOptionSelect(option)}
+                      className="w-full p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-purple-200 transition-all text-left flex items-center gap-4"
+                    >
+                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-purple-50 text-purple-600">
+                        {getIcon(option.id)}
+                      </span>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{option.label}</div>
+                        <div className="text-xs text-gray-500">Generate focused guidance</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {!showChat && selectedOption && (
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1 flex flex-col pb-20 md:pb-4">
                 <div className="flex items-center gap-2 text-purple-700">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-purple-50 text-purple-600">
                     {getIcon(selectedOption.id)}
@@ -312,42 +314,45 @@ export const RefineModal: React.FC<RefineModalProps> = ({
                   <span className="font-medium">Refining: {selectedOption.label}</span>
                 </div>
 
-                {isLoading && (
-                  <div className="flex items-center justify-center py-10">
-                    <div className="w-8 h-8 rounded-full border-2 border-purple-300 border-t-purple-600 animate-spin"></div>
-                    <span className="ml-3 text-gray-600">Generating refined content…</span>
-                  </div>
-                )}
-
-                {!isLoading && hasNewContent && refinedContent && activeOptionId === selectedOption.id && (
-                  <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 className="font-semibold mb-2 text-gray-900">Refined Content</h4>
-                    <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-base font-semibold mb-2 text-gray-800">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-gray-700">{children}</h3>,
-                          ul: ({ children }) => <ul className="mb-3 last:mb-0 pl-0 space-y-1">{children}</ul>,
-                          li: ({ children }) => <li className="flex items-start gap-2"><span className="text-purple-600 mt-1">•</span><span>{children}</span></li>,
-                          strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                          em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
-                        }}
-                      >
-                        {refinedContent}
-                      </ReactMarkdown>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {isLoading && (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="w-8 h-8 rounded-full border-2 border-purple-300 border-t-purple-600 animate-spin"></div>
+                      <span className="ml-3 text-gray-600">Generating refined content…</span>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="pt-4 mt-4">
-                  <button
-                    onClick={() => setSelectedOption(null)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    ← Back to options
-                  </button>
+                  {!isLoading && hasNewContent && refinedContent && activeOptionId === selectedOption.id && (
+                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-4">
+                      <h4 className="font-semibold mb-2 text-gray-900">Refined Content</h4>
+                      <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                            h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-base font-semibold mb-2 text-gray-800">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-gray-700">{children}</h3>,
+                            ul: ({ children }) => <ul className="mb-3 last:mb-0 pl-0 space-y-1">{children}</ul>,
+                            li: ({ children }) => <li className="flex items-start gap-2"><span className="text-purple-600 mt-1">•</span><span>{children}</span></li>,
+                            strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                          }}
+                        >
+                          {refinedContent}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Desktop back button - hidden on mobile */}
+                  <div className="hidden md:block pt-4">
+                    <button
+                      onClick={() => setSelectedOption(null)}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      ← Back to options
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -433,6 +438,20 @@ export const RefineModal: React.FC<RefineModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Fixed bottom navigation for mobile - Back to options */}
+        {!showChat && selectedOption && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-4 md:hidden z-20">
+            <div className="max-w-4xl mx-auto">
+              <button
+                onClick={() => setSelectedOption(null)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors text-sm font-medium shadow-lg"
+              >
+                ← Back to options
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
