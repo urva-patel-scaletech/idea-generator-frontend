@@ -370,14 +370,8 @@ export class IdeaGeneratorService {
       const effectiveThreadId = threadId || IdeaGeneratorService.getCurrentThreadId();
       if (!effectiveThreadId) throw new Error('Thread ID is required for refinement');
 
-      // Map frontend refinement types to backend aspects
-      const aspectMap: Record<string, string> = {
-        'Business Model': 'business-model',
-        'Target Audience': 'target-audience',
-        'Marketing Channels': 'marketing-strategy'
-      };
-
-      const aspect = aspectMap[refinementType] || 'business-model';
+      // Use refinementType directly as it's now the option.id
+      const aspect = refinementType;
       
       const request: RefineRequest = {
         cardId: idea.id, // Pass the card ID from the idea

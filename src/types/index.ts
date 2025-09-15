@@ -100,7 +100,7 @@ export interface GenerateResponse {
 
 export interface RefineRequest {
   cardId: string;
-  aspect: 'business-model' | 'target-audience' | 'market-analysis' | 'revenue-streams' | 'competitive-analysis' | 'technical-requirements' | 'marketing-strategy' | 'risk-assessment';
+  aspect: 'business-model' | 'target-audience' | 'marketing-strategy' | 'financial-planning' | 'risk-assessment' | 'technical-requirements' | 'legal-compliance' | 'competitive-analysis' | 'revenue-streams' | 'operational-planning' | 'growth-strategy' | 'partnerships' | 'market-entry';
   options?: Record<string, unknown>;
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Zap, Users, Target, TrendingUp, MessageCircle, Send, ChevronRight } from 'lucide-react';
+import { X, Zap, Users, Target, TrendingUp, MessageCircle, Send, ChevronRight, DollarSign, Shield, Settings, Scale, BarChart3, Coins, Cog, Rocket, Handshake, MapPin } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { BusinessIdea, RefineOption } from '../types';
 import { GenerateService } from '../services/apiService';
@@ -32,9 +32,59 @@ const refineOptions: RefineOption[] = [
     prompt: 'target audience'
   },
   {
-    id: 'marketing-channels',
-    label: 'Marketing Channels',
-    prompt: 'marketing channels'
+    id: 'marketing-strategy',
+    label: 'Marketing Strategy',
+    prompt: 'marketing strategy'
+  },
+  {
+    id: 'financial-planning',
+    label: 'Financial Planning',
+    prompt: 'financial planning'
+  },
+  {
+    id: 'risk-assessment',
+    label: 'Risk Assessment',
+    prompt: 'risk assessment'
+  },
+  {
+    id: 'technical-requirements',
+    label: 'Technical Requirements',
+    prompt: 'technical requirements'
+  },
+  {
+    id: 'legal-compliance',
+    label: 'Legal & Compliance',
+    prompt: 'legal compliance'
+  },
+  {
+    id: 'competitive-analysis',
+    label: 'Competitive Analysis',
+    prompt: 'competitive analysis'
+  },
+  {
+    id: 'revenue-streams',
+    label: 'Revenue Streams',
+    prompt: 'revenue streams'
+  },
+  {
+    id: 'operational-planning',
+    label: 'Operational Planning',
+    prompt: 'operational planning'
+  },
+  {
+    id: 'growth-strategy',
+    label: 'Growth Strategy',
+    prompt: 'growth strategy'
+  },
+  {
+    id: 'partnerships',
+    label: 'Partnerships',
+    prompt: 'partnerships'
+  },
+  {
+    id: 'market-entry',
+    label: 'Market Entry',
+    prompt: 'market entry'
   }
 ];
 
@@ -170,7 +220,17 @@ export const RefineModal: React.FC<RefineModalProps> = ({
     switch (optionId) {
       case 'business-model': return <TrendingUp className="w-5 h-5" />;
       case 'target-audience': return <Users className="w-5 h-5" />;
-      case 'marketing-channels': return <Target className="w-5 h-5" />;
+      case 'marketing-strategy': return <Target className="w-5 h-5" />;
+      case 'financial-planning': return <DollarSign className="w-5 h-5" />;
+      case 'risk-assessment': return <Shield className="w-5 h-5" />;
+      case 'technical-requirements': return <Settings className="w-5 h-5" />;
+      case 'legal-compliance': return <Scale className="w-5 h-5" />;
+      case 'competitive-analysis': return <BarChart3 className="w-5 h-5" />;
+      case 'revenue-streams': return <Coins className="w-5 h-5" />;
+      case 'operational-planning': return <Cog className="w-5 h-5" />;
+      case 'growth-strategy': return <Rocket className="w-5 h-5" />;
+      case 'partnerships': return <Handshake className="w-5 h-5" />;
+      case 'market-entry': return <MapPin className="w-5 h-5" />;
       default: return <Zap className="w-5 h-5" />;
     }
   };
@@ -262,14 +322,29 @@ export const RefineModal: React.FC<RefineModalProps> = ({
                 {!isLoading && hasNewContent && refinedContent && activeOptionId === selectedOption.id && (
                   <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h4 className="font-semibold mb-2 text-gray-900">Refined Content</h4>
-                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{refinedContent}</p>
+                    <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-base font-semibold mb-2 text-gray-800">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-gray-700">{children}</h3>,
+                          ul: ({ children }) => <ul className="mb-3 last:mb-0 pl-0 space-y-1">{children}</ul>,
+                          li: ({ children }) => <li className="flex items-start gap-2"><span className="text-purple-600 mt-1">•</span><span>{children}</span></li>,
+                          strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                          em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                        }}
+                      >
+                        {refinedContent}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 )}
 
-                <div className="pt-1">
+                <div className="pt-4 mt-4">
                   <button
                     onClick={() => setSelectedOption(null)}
-                    className="text-purple-700 hover:text-purple-800 text-sm"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors text-sm font-medium"
                   >
                     ← Back to options
                   </button>

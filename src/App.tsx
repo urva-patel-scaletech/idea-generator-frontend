@@ -69,7 +69,7 @@ function App() {
     }));
 
     try {
-      const refinedContent = await IdeaGeneratorService.refineIdea(refineModal.idea, option.label);
+      const refinedContent = await IdeaGeneratorService.refineIdea(refineModal.idea, option.id);
       consumeRefineCredit(); // Consume a refine credit
       
       setRefineModal(prev => ({
