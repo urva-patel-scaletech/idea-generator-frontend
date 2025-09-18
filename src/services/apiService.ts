@@ -17,7 +17,8 @@ import {
   ApiError,
   AssistantsResponse,
   ThreadsResponse,
-  MessagesResponse
+  MessagesResponse,
+  UserHistoryResponse
 } from '../types';
 
 import { API_CONFIG } from '../config/api';
@@ -359,6 +360,16 @@ export class GenerateService {
       return response;
     } catch (error) {
       console.error('Error fetching chat history:', error);
+      throw error;
+    }
+  }
+
+  static async getUserHistory(): Promise<UserHistoryResponse> {
+    try {
+      const response = await ApiClient.get<UserHistoryResponse>('/generate/history');
+      return response;
+    } catch (error) {
+      console.error('Error fetching user history:', error);
       throw error;
     }
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Lightbulb, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
+import { Lightbulb, ChevronDown, ChevronRight, HelpCircle, History, X } from 'lucide-react';
 import { TrendingInsights } from './TrendingInsights';
 import { IdeaGeneratorService, AuthService } from '../services/apiService';
 import { useToast } from './Toast';
@@ -9,6 +9,7 @@ interface LandingPageProps {
   onGenerateIdeas: (industry: string) => void;
   isLoading: boolean;
   onTrendingSearchesLoad: (searches: TrendingIdea[]) => void;
+  onViewHistory?: () => void;
 }
 
 
@@ -19,7 +20,7 @@ const INDUSTRY_SUGGESTIONS = [
 ];
 
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoading, onTrendingSearchesLoad }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoading, onTrendingSearchesLoad, onViewHistory }) => {
   const { showToast } = useToast();
   // Mobile-first step controller - now starts at step 1 (industry) instead of business type
   const [step, setStep] = useState<1 | 2>(1);
@@ -65,7 +66,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     };
     
     loadTrendingSearches();
-  }, [onTrendingSearchesLoad]);
+  }, [onTrendingSearchesLoad, showToast]);
 
   // Auto-advance removed per request; user proceeds via explicit Next button
 
@@ -225,8 +226,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
               </div>
             </div>
 
-            {/* Auth */}
+            {/* Navigation & Auth */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {onViewHistory && (
+                <button
+                  onClick={onViewHistory}
+                  className="flex items-center gap-1 px-3 py-2 text-sm md:text-base text-gray-700 hover:text-gray-900 transition-colors"
+                  title="View History"
+                >
+                  <History className="w-4 h-4" />
+                  <span className="hidden sm:inline">History</span>
+                </button>
+              )}
               {currentUser ? (
                 <>
                   <span className="hidden sm:block text-gray-600">Hi, {currentUser.name.split(' ')[0]}!</span>
@@ -302,11 +313,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
                       onFocus={() => setShowIndustrySuggestions(true)}
                       onKeyPress={handleIndustryKeyPress}
                       placeholder="e.g., Healthcare, Technology, E-commerce... (Press Enter to continue)"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all duration-300 outline-none"
+                      className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all duration-300 outline-none"
                       disabled={isLoading}
                     />
+                    {industry && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIndustry('');
+                          setShowIndustrySuggestions(true);
+                        }}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Clear selection"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                     {showIndustrySuggestions && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
+                      <div className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
                         {INDUSTRY_SUGGESTIONS
                           .filter(suggestion => industry === '' || suggestion.toLowerCase().includes(industry.toLowerCase()))
                           .map((suggestion, index) => (
@@ -410,7 +434,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
         </div>
 
         {/* Trending Ideas Section */}
-        <div className="mt-10 md:mt-16 max-w-6xl mx-auto">
+        <div className={`max-w-6xl mx-auto transition-all duration-300 ${showIndustrySuggestions ? 'mt-16 md:mt-20' : 'mt-10 md:mt-16'}`}>
           <div className="flex justify-center mb-6 md:mb-10">
             <div className="max-w-md">
               <TrendingInsights 

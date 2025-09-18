@@ -203,6 +203,36 @@ export interface TrendingSearch {
   updatedAt: string;
 }
 
+// User History Types
+export interface UserHistoryItem {
+  threadId: string;
+  title: string;
+  appType: string;
+  createdAt: string;
+  updatedAt: string;
+  generatedIdeas: BusinessIdea[];
+  refinements: unknown[];
+  totalIdeas: number;
+  hasRefinements: boolean;
+}
+
+export interface UserHistoryData {
+  totalThreads: number;
+  totalIdeas: number;
+  history: UserHistoryItem[];
+}
+
+export interface UserHistoryResponse {
+  success: boolean;
+  message: string;
+  data: UserHistoryData | {
+    success: boolean;
+    data: UserHistoryData;
+  };
+  timestamp: string;
+  path: string;
+}
+
 // API Error Response
 export interface ApiError {
   statusCode: number;
