@@ -1,17 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
-import { BusinessIdea, TrendingSearch } from '../types';
+import { BusinessIdea } from '../types';
 import { IdeaCard } from './IdeaCard';
-import { TrendingInsights } from './TrendingInsights';
-import { IdeaGeneratorService } from '../services/apiService';
 
 interface ResultsSectionProps {
   ideas: BusinessIdea[];
   industry: string;
   onBack: () => void;
   onRefine: (idea: BusinessIdea) => void;
-  onSave: (idea: BusinessIdea) => void;
-  onShare: (idea: BusinessIdea) => void;
+  onSave: () => void;
+  onShare: () => void;
   canRefine: boolean;
 }
 
@@ -22,9 +20,8 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   onRefine,
   onSave,
   onShare,
-  canRefine
+  canRefine,
 }) => {
-  const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>([]);
 
   // Helper: derive a clean industry label from a possibly long natural prompt
   const displayIndustry = useMemo(() => {
@@ -65,25 +62,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
     return raw.length > 36 ? raw.slice(0, 34).trim() + '…' : raw;
   }, [industry]);
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const data = await IdeaGeneratorService.getTrendingSearches();
-        if (isMounted && Array.isArray(data)) {
-          setTrendingSearches(data);
-        } else if (isMounted) {
-          setTrendingSearches([]);
-        }
-      } catch {
-        setTrendingSearches([]);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-  
+
   const averageMarketScore = ideas.length
     ? ideas.reduce((sum, idea) => sum + (idea.marketScore ?? 0), 0) / ideas.length
     : 0;
@@ -125,26 +104,19 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-4 gap-8 mb-12">
+        <div className="mb-12">
           {/* Ideas Grid */}
-          <div className="lg:col-span-3">
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {ideas.map((idea) => (
-                <IdeaCard
-                  key={idea.id}
-                  idea={idea}
-                  onRefine={onRefine}
-                  onSave={onSave}
-                  onShare={onShare}
-                  canRefine={canRefine}
-                />
-              ))}
-            </div>
-          </div>
-          
-          {/* Trending Sidebar */}
-          <div className="lg:col-span-1">
-            <TrendingInsights trendingSearches={trendingSearches} />
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {ideas.map((idea) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                onRefine={onRefine}
+                onSave={onSave}
+                onShare={onShare}
+                canRefine={canRefine}
+              />
+            ))}
           </div>
         </div>
 

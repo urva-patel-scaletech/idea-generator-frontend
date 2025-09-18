@@ -3,9 +3,10 @@ import { LandingPage } from './components/LandingPage';
 import { ResultsSection } from './components/ResultsSection';
 import { RefineModal } from './components/RefineModal';
 import { UpgradeModal } from './components/UpgradeModal';
+import { ToastProvider } from './components/Toast';
 import { IdeaGeneratorService } from './services/apiService';
 import { useUserLimits } from './hooks/useUserLimits';
-import { BusinessIdea, RefineOption } from './types';
+import { BusinessIdea, RefineOption, TrendingIdea } from './types';
 
 type AppState = 'landing' | 'results';
 
@@ -14,6 +15,7 @@ function App() {
   const [ideas, setIdeas] = useState<BusinessIdea[]>([]);
   const [currentIndustry, setCurrentIndustry] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [trendingSearches, setTrendingSearches] = useState<TrendingIdea[]>([]);
   
   // Modal states
   const [refineModal, setRefineModal] = useState<{
@@ -40,11 +42,13 @@ function App() {
       const generatedIdeas = await IdeaGeneratorService.generateIdeas(industry);
       setIdeas(generatedIdeas.map(idea => ({ ...idea, industry })));
       setAppState('results');
-    } catch (error) {
-      console.error('Error generating ideas:', error);
-      alert('Failed to generate ideas. Please try again.');
-    } finally {
       setIsLoading(false);
+    } catch (error: unknown) {
+      console.error('Error generating ideas:', error);
+      setIsLoading(false);
+      // Don't change app state - stay on landing page
+      // Re-throw error so LandingPage can handle it with toast
+      throw error;
     }
   };
 
@@ -83,16 +87,16 @@ function App() {
         ...prev,
         isLoading: false
       }));
-      alert('Failed to refine idea. Please try again.');
+      // Error handling will be added with toast system
     }
   };
 
   const handleSaveIdea = () => {
-    alert('Coming soon! Save functionality will be available in the next update.');
+    // Will be implemented with proper toast notifications
   };
 
   const handleShareIdea = () => {
-    alert('Coming soon! Share functionality will be available in the next update.');
+    // Will be implemented with proper toast notifications
   };
 
   const handleBackToLanding = () => {
@@ -107,11 +111,12 @@ function App() {
   };
 
   return (
-    <>
+    <ToastProvider>
       {appState === 'landing' ? (
         <LandingPage
           onGenerateIdeas={handleGenerateIdeas}
           isLoading={isLoading}
+          onTrendingSearchesLoad={setTrendingSearches}
         />
       ) : (
         <ResultsSection
@@ -122,6 +127,7 @@ function App() {
           onSave={handleSaveIdea}
           onShare={handleShareIdea}
           canRefine={canRefine}
+          trendingSearches={trendingSearches}
         />
       )}
 
@@ -139,7 +145,7 @@ function App() {
         isOpen={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
       />
-    </>
+    </ToastProvider>
   );
 }
 

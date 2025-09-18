@@ -28,7 +28,6 @@ export interface Assistant {
     defaultCount?: number;
     defaultFormat?: string;
     defaultIndustry?: string;
-    defaultComplexity?: string;
     refinementOptions?: string[];
   };
   createdAt: string;
@@ -52,11 +51,9 @@ export interface Thread {
       refined?: unknown[];
     };
     resolvedParams?: {
-      tone?: string;
       count?: number;
       format?: string;
       industry?: string;
-      complexity?: string;
       target_audience?: string;
     };
     generatedContent?: BusinessIdea[];
@@ -169,7 +166,6 @@ export interface BusinessIdea {
   trendDirection?: 'up' | 'down' | 'stable';
   searchVolume?: string;
   score?: number;
-  complexity?: string;
 }
 
 export interface RefineOption {
@@ -183,6 +179,20 @@ export interface UserLimits {
   maxRefines: number;
 }
 
+export interface TrendingIdea {
+  title: string;
+  description: string;
+}
+
+export interface TrendingResponse {
+  success: boolean;
+  message: string;
+  data: TrendingIdea[];
+  timestamp: string;
+  path: string;
+}
+
+// Legacy type for backward compatibility
 export interface TrendingSearch {
   id: string;
   title: string;

@@ -12,7 +12,8 @@ import {
   Thread,
   Message,
   User,
-  TrendingSearch,
+  TrendingIdea,
+  TrendingResponse,
   ApiError,
   AssistantsResponse,
   ThreadsResponse,
@@ -20,6 +21,7 @@ import {
 } from '../types';
 
 import { API_CONFIG } from '../config/api';
+import { deviceService } from '../utils/deviceFingerprint';
 
 // API Configuration
 const API_BASE_URL = API_CONFIG.BASE_URL;
@@ -31,10 +33,19 @@ class ApiClient {
 
   private static getAuthHeaders(): HeadersInit {
     const token = this.getAuthToken();
-    return {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` })
     };
+
+    // Add device headers for anonymous users
+    if (!token) {
+      const deviceInfo = deviceService.getDeviceInfo();
+      headers['X-Device-ID'] = deviceInfo.deviceId;
+      headers['X-Device-Platform'] = deviceInfo.platform;
+    }
+
+    return headers;
   }
 
   private static async handleResponse<T>(response: Response): Promise<T> {
@@ -87,17 +98,38 @@ class ApiClient {
 // Authentication Service
 export class AuthService {
   static async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await ApiClient.post<AuthResponse>('/auth/login', credentials);
-    localStorage.setItem('auth_token', response.data.access_token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-    return response;
+    try {
+      const response = await ApiClient.post<AuthResponse>('/auth/login', credentials);
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   }
 
   static async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await ApiClient.post<AuthResponse>('/auth/register', userData);
-    localStorage.setItem('auth_token', response.data.access_token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-    return response;
+    try {
+      // Include device info for anonymous user conversion
+      const deviceInfo = deviceService.getDeviceInfo();
+      const registrationData = {
+        ...userData,
+        deviceInfo
+      };
+      
+      const response = await ApiClient.post<AuthResponse>('/auth/register', registrationData);
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Clear device ID after successful registration to prevent conflicts
+      deviceService.clearDeviceId();
+      
+      return response;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   }
 
   static logout(): void {
@@ -138,103 +170,197 @@ export class AuthService {
 // Assistant Service
 export class AssistantService {
   static async getAllAssistants(): Promise<Assistant[]> {
-    const response = await ApiClient.get<AssistantsResponse>('/assistants');
-    return response.data;
+    try {
+      const response = await ApiClient.get<AssistantsResponse>('/assistants');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching assistants:', error);
+      throw error;
+    }
   }
 
   static async getAssistantsByCategory(category: string): Promise<Assistant[]> {
-    const response = await ApiClient.get<AssistantsResponse>(`/assistants?category=${category}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<AssistantsResponse>(`/assistants?category=${category}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching assistants by category:', error);
+      throw error;
+    }
   }
 
   static async getAssistantById(id: string): Promise<Assistant> {
-    const response = await ApiClient.get<{ success: boolean; message: string; data: Assistant; timestamp: string; path: string }>(`/assistants/${id}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<{ success: boolean; message: string; data: Assistant; timestamp: string; path: string }>(`/assistants/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching assistant by ID:', error);
+      throw error;
+    }
   }
 }
 
 // Thread Service
 export class ThreadService {
   static async getAllThreads(): Promise<Thread[]> {
-    const response = await ApiClient.get<ThreadsResponse>('/threads');
-    return response.data;
+    try {
+      const response = await ApiClient.get<ThreadsResponse>('/threads');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching threads:', error);
+      throw error;
+    }
   }
 
   static async getThreadsByUser(userId: string): Promise<Thread[]> {
-    const response = await ApiClient.get<ThreadsResponse>(`/threads?userId=${userId}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<ThreadsResponse>(`/threads?userId=${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching threads by user:', error);
+      throw error;
+    }
   }
 
   static async getThreadById(id: string): Promise<Thread> {
-    const response = await ApiClient.get<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/threads/${id}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/threads/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching thread by ID:', error);
+      throw error;
+    }
   }
 
   static async createThread(data: { userId: string; assistantId: string; title: string; stage: string }): Promise<Thread> {
-    const response = await ApiClient.post<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>('/threads', data);
-    return response.data;
+    try {
+      const response = await ApiClient.post<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>('/threads', data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      throw error;
+    }
   }
 
   static async updateThread(id: string, data: Partial<Thread>): Promise<Thread> {
-    const response = await ApiClient.patch<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/threads/${id}`, data);
-    return response.data;
+    try {
+      const response = await ApiClient.patch<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/threads/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating thread:', error);
+      throw error;
+    }
   }
 
   static async deleteThread(id: string): Promise<void> {
-    await ApiClient.delete<{ success: boolean; message: string; timestamp: string; path: string }>(`/threads/${id}`);
+    try {
+      await ApiClient.delete<{ success: boolean; message: string; timestamp: string; path: string }>(`/threads/${id}`);
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+      throw error;
+    }
   }
 }
 
 // Message Service
 export class MessageService {
   static async getMessagesByThread(threadId: string): Promise<Message[]> {
-    const response = await ApiClient.get<MessagesResponse>(`/messages/thread/${threadId}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<MessagesResponse>(`/messages/thread/${threadId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
+    }
   }
 
   static async sendMessage(data: { threadId: string; content: string }): Promise<{ userMessage: Message; assistantMessage: Message }> {
-    const response = await ApiClient.post<{ success: boolean; message: string; data: { userMessage: Message; assistantMessage: Message }; timestamp: string; path: string }>('/messages/send', data);
-    return response.data;
+    try {
+      const response = await ApiClient.post<{ success: boolean; message: string; data: { userMessage: Message; assistantMessage: Message }; timestamp: string; path: string }>('/messages/send', data);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
   }
 }
 
 // Generate Service (Main AI functionality)
 export class GenerateService {
   static async generateContent(request: GenerateRequest): Promise<GenerateResponse> {
-    return ApiClient.post<GenerateResponse>('/generate', request);
+    try {
+      return await ApiClient.post<GenerateResponse>('/generate', request);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      throw error;
+    }
   }
 
   static async refineContent(threadId: string, request: RefineRequest): Promise<RefineResponse> {
-    return ApiClient.post<RefineResponse>(`/generate/${threadId}/refine`, request);
+    try {
+      return await ApiClient.post<RefineResponse>(`/generate/${threadId}/refine`, request);
+    } catch (error) {
+      console.error('Error refining content:', error);
+      throw error;
+    }
   }
 
   static async saveIdea(threadId: string, ideaId: string, customTitle?: string): Promise<void> {
-    await ApiClient.post<{ success: boolean; message: string; timestamp: string; path: string }>(`/generate/${threadId}/save`, { ideaId, customTitle });
+    try {
+      await ApiClient.post<{ success: boolean; message: string; timestamp: string; path: string }>(`/generate/${threadId}/save`, { ideaId, customTitle });
+    } catch (error) {
+      console.error('Error saving idea:', error);
+      throw error;
+    }
   }
 
   static async shareIdea(threadId: string, ideaId: string, shareSettings?: Record<string, unknown>): Promise<void> {
-    await ApiClient.post<{ success: boolean; message: string; timestamp: string; path: string }>(`/generate/${threadId}/share`, { ideaId, shareSettings });
+    try {
+      await ApiClient.post<{ success: boolean; message: string; timestamp: string; path: string }>(`/generate/${threadId}/share`, { ideaId, shareSettings });
+    } catch (error) {
+      console.error('Error sharing idea:', error);
+      throw error;
+    }
   }
 
   static async getThread(threadId: string): Promise<Thread> {
-    const response = await ApiClient.get<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/generate/${threadId}`);
-    return response.data;
+    try {
+      const response = await ApiClient.get<{ success: boolean; message: string; data: Thread; timestamp: string; path: string }>(`/generate/${threadId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching thread:', error);
+      throw error;
+    }
   }
 
-  static async getTrendingIdeas(appType?: string): Promise<TrendingSearch[]> {
-    const endpoint = appType ? `/generate/trending?appType=${appType}` : '/generate/trending';
-    const response = await ApiClient.get<{ success: boolean; message: string; data: TrendingSearch[]; timestamp: string; path: string }>(endpoint);
-    return response.data;
+  static async getTrendingIdeas(): Promise<TrendingIdea[]> {
+    try {
+      const response = await ApiClient.get<TrendingResponse>('/trending');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching trending ideas:', error);
+      throw error;
+    }
   }
 
   static async chatWithAi(threadId: string, chatDto: { cardId: string; message: string }) {
-    const response = await ApiClient.post(`/generate/${threadId}/chat`, chatDto);
-    return response;
+    try {
+      const response = await ApiClient.post(`/generate/${threadId}/chat`, chatDto);
+      return response;
+    } catch (error) {
+      console.error('Error chatting with AI:', error);
+      throw error;
+    }
   }
 
   static async getChatHistory(threadId: string, cardId: string) {
-    const response = await ApiClient.get(`/generate/${threadId}/chat/${cardId}`);
-    return response;
+    try {
+      const response = await ApiClient.get(`/generate/${threadId}/chat/${cardId}`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      throw error;
+    }
   }
 }
 
@@ -281,7 +407,6 @@ export class IdeaGeneratorService {
               description: (cardResult.description as string) || 'No description available',
               score: (cardResult.score as number) || result.score || 7.5,
               marketScore: (cardResult.score as number) || result.score || 7.5,
-              complexity: 'simple'
             } as BusinessIdea;
           }
           
@@ -360,8 +485,8 @@ export class IdeaGeneratorService {
       return [];
     } catch (error) {
       console.error('Error generating ideas:', error);
-      // No fallback dummy data
-      return [];
+      // Re-throw the error instead of returning empty array
+      throw error;
     }
   }
 
@@ -387,13 +512,12 @@ export class IdeaGeneratorService {
     }
   }
 
-  static async getTrendingSearches(): Promise<TrendingSearch[]> {
+  static async getTrendingSearches(): Promise<TrendingIdea[]> {
     try {
       return await GenerateService.getTrendingIdeas();
     } catch (error) {
       console.error('Error fetching trending searches:', error);
-      // No dummy fallback
-      return [];
+      throw error;
     }
   }
 

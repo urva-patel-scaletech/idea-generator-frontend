@@ -26,12 +26,33 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({
     onSave(idea);
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    // Trigger refine action when clicking anywhere on the card
+    if (canRefine) {
+      onRefine(idea);
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't start drag if clicking on buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
     setIsDragging(true);
     const startX = e.clientX;
+    let hasMoved = false;
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
+      if (Math.abs(deltaX) > 5) {
+        hasMoved = true;
+      }
       setDragX(deltaX);
     };
 
@@ -47,6 +68,9 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({
           handleSave(); // Swipe right = save
         }
         // Swipe left could be discard, but we'll just reset for now
+      } else if (!hasMoved) {
+        // If no significant movement, treat as a click
+        handleCardClick(e);
       }
     };
 
@@ -65,12 +89,14 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({
     <div className="relative">
       <div
         className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 
-                    cursor-grab active:cursor-grabbing border border-gray-100
-                    ${isDragging ? 'scale-105 shadow-xl' : ''}`}
+                    ${canRefine ? 'cursor-pointer' : 'cursor-default'} border border-gray-100
+                    ${isDragging ? 'scale-105 shadow-xl' : ''}
+                    ${canRefine ? 'hover:border-purple-200' : ''}`}
         style={{
           transform: `translateX(${dragX}px) ${isDragging ? 'rotate(2deg)' : ''}`,
         }}
         onMouseDown={handleMouseDown}
+        onClick={handleCardClick}
       >
         {/* Swipe Indicators */}
         {isDragging && (

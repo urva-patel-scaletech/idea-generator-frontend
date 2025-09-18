@@ -271,7 +271,7 @@ export const RefineModal: React.FC<RefineModalProps> = ({
                   onClick={() => setShowChat(true)}
                   className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${showChat ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-800 hover:bg-white/60'}`}
                 >
-                  <MessageCircle className="w-4 h-4 inline mr-1.5" /> Chat with AI
+                  <MessageCircle className="w-4 h-4 inline mr-1.5" /> Chat with Agent
                 </button>
               )}
             </div>
