@@ -5,8 +5,6 @@ import {
   GenerateResponse,
   RefineRequest,
   RefineResponse,
-  LoginRequest,
-  RegisterRequest,
   AuthResponse,
   Assistant,
   Thread,
@@ -96,41 +94,140 @@ class ApiClient {
   }
 }
 
+// OAuth Login Request interface
+interface OAuthLoginRequest {
+  token: string;
+  provider: 'google' | 'apple';
+  platform: 'web' | 'mobile';
+  deviceInfo?: {
+    deviceId: string;
+    platform: string;
+  };
+}
+
 // Authentication Service
 export class AuthService {
-  static async login(credentials: LoginRequest): Promise<AuthResponse> {
-    try {
-      const response = await ApiClient.post<AuthResponse>('/auth/login', credentials);
-      localStorage.setItem('auth_token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      return response;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+  // OAuth Web Login - Redirect to backend OAuth initiation
+  static initiateGoogleOAuth(): void {
+    // Store device info in sessionStorage before OAuth redirect
+    const deviceInfo = deviceService.getDeviceInfo();
+    sessionStorage.setItem('oauth_device_info', JSON.stringify(deviceInfo));
+    
+    // Add device info as query parameters to OAuth initiation
+    const params = new URLSearchParams({
+      deviceId: deviceInfo.deviceId,
+      platform: deviceInfo.platform
+    });
+    window.location.href = `${API_BASE_URL}/auth/google?${params.toString()}`;
   }
 
-  static async register(userData: RegisterRequest): Promise<AuthResponse> {
-    try {
-      // Include device info for anonymous user conversion
-      const deviceInfo = deviceService.getDeviceInfo();
-      const registrationData = {
-        ...userData,
-        deviceInfo
-      };
-      
-      const response = await ApiClient.post<AuthResponse>('/auth/register', registrationData);
-      localStorage.setItem('auth_token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Clear device ID after successful registration to prevent conflicts
-      deviceService.clearDeviceId();
-      
-      return response;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+  static initiateAppleOAuth(): void {
+    // Store device info in sessionStorage before OAuth redirect
+    const deviceInfo = deviceService.getDeviceInfo();
+    sessionStorage.setItem('oauth_device_info', JSON.stringify(deviceInfo));
+    
+    // Add device info as query parameters to OAuth initiation
+    const params = new URLSearchParams({
+      deviceId: deviceInfo.deviceId,
+      platform: deviceInfo.platform
+    });
+    window.location.href = `${API_BASE_URL}/auth/apple?${params.toString()}`;
+  }
+
+  // OAuth Mobile Login - Token verification
+  static async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const deviceInfo = deviceService.getDeviceInfo();
+    const oauthRequest: OAuthLoginRequest = {
+      token: idToken,
+      provider: 'google',
+      platform: 'mobile',
+      deviceInfo
+    };
+    
+    const response = await ApiClient.post<AuthResponse>('/auth/google/verify', oauthRequest);
+    localStorage.setItem('auth_token', response.data.access_token);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    
+    // Clear device ID after successful OAuth login
+    deviceService.clearDeviceId();
+    
+    return response;
+  }
+
+  static async loginWithApple(idToken: string): Promise<AuthResponse> {
+    const deviceInfo = deviceService.getDeviceInfo();
+    const oauthRequest: OAuthLoginRequest = {
+      token: idToken,
+      provider: 'apple',
+      platform: 'mobile',
+      deviceInfo
+    };
+    
+    const response = await ApiClient.post<AuthResponse>('/auth/apple/verify', oauthRequest);
+    localStorage.setItem('auth_token', response.data.access_token);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    
+    // Clear device ID after successful OAuth login
+    deviceService.clearDeviceId();
+    
+    return response;
+  }
+
+  // Handle OAuth callback (for web redirects)
+  static handleOAuthCallback(): { success: boolean; token?: string; error?: string } {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const error = urlParams.get('error');
+
+    if (error) {
+      return { success: false, error: decodeURIComponent(error) };
     }
+
+    if (token) {
+      try {
+        // Store the JWT token
+        localStorage.setItem('auth_token', token);
+        
+        // Parse JWT payload to get user info
+        const parts = token.split('.');
+        
+        if (parts.length !== 3) {
+          throw new Error('Invalid JWT format - expected 3 parts');
+        }
+        
+        const payloadBase64 = parts[1];
+        
+        // Add padding if needed
+        const paddedPayload = payloadBase64 + '='.repeat((4 - payloadBase64.length % 4) % 4);
+        const decodedPayload = atob(paddedPayload);
+        
+        const payload = JSON.parse(decodedPayload);
+        
+        // Create user object from JWT payload
+        const user = {
+          id: payload.sub,
+          name: payload.name,
+          email: payload.email
+        };
+        
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Clear device ID after successful OAuth login to prevent conflicts
+        deviceService.clearDeviceId();
+        
+        // Clear OAuth device info from session storage
+        sessionStorage.removeItem('oauth_device_info');
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        return { success: true, token };
+      } catch (parseError) {
+        return { success: false, error: `Invalid token received: ${parseError instanceof Error ? parseError.message : 'Unknown error'}` };
+      }
+    }
+
+    return { success: false, error: 'No token received' };
   }
 
   static logout(): void {
@@ -171,33 +268,18 @@ export class AuthService {
 // Assistant Service
 export class AssistantService {
   static async getAllAssistants(): Promise<Assistant[]> {
-    try {
-      const response = await ApiClient.get<AssistantsResponse>('/assistants');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching assistants:', error);
-      throw error;
-    }
+    const response = await ApiClient.get<AssistantsResponse>('/assistants');
+    return response.data;
   }
 
   static async getAssistantsByCategory(category: string): Promise<Assistant[]> {
-    try {
-      const response = await ApiClient.get<AssistantsResponse>(`/assistants?category=${category}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching assistants by category:', error);
-      throw error;
-    }
+    const response = await ApiClient.get<AssistantsResponse>(`/assistants?category=${category}`);
+    return response.data;
   }
 
   static async getAssistantById(id: string): Promise<Assistant> {
-    try {
-      const response = await ApiClient.get<{ success: boolean; message: string; data: Assistant; timestamp: string; path: string }>(`/assistants/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching assistant by ID:', error);
-      throw error;
-    }
+    const response = await ApiClient.get<{ success: boolean; message: string; data: Assistant; timestamp: string; path: string }>(`/assistants/${id}`);
+    return response.data;
   }
 }
 

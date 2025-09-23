@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Lightbulb, ChevronDown, ChevronRight, HelpCircle, History, X } from 'lucide-react';
 import { TrendingInsights } from './TrendingInsights';
+import { OAuthButtons } from './OAuthButtons';
 import { IdeaGeneratorService, AuthService } from '../services/apiService';
 import { useToast } from './Toast';
 import { User, TrendingIdea } from '../types';
@@ -33,17 +34,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
   const [trendingSearches, setTrendingSearches] = useState<TrendingIdea[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authData, setAuthData] = useState({ name: '', email: '', password: '' });
-  const [authLoading, setAuthLoading] = useState(false);
   const cardsRef = useRef<HTMLFormElement>(null);
+  const industryInputRef = useRef<HTMLDivElement>(null);
 
   // Derived - businessIdea is now optional
   const isFormValid = useMemo(() => industry.trim().length > 0, [industry]);
 
   useEffect(() => {
-    // Check if user is authenticated
-    setCurrentUser(AuthService.getCurrentUser());
+    // Handle OAuth callback first, before checking authentication
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('token') || urlParams.has('error')) {
+      const result = AuthService.handleOAuthCallback();
+      
+      if (result.success) {
+        // Force update the current user state
+        const user = AuthService.getCurrentUser();
+        setCurrentUser(user);
+        
+        showToast({
+          type: 'success',
+          title: 'Login Successful',
+          message: `Welcome ${user?.name || 'User'}! You have been successfully logged in.`
+        });
+        
+        // Don't reload the page, just update the state
+        return; // Exit early to prevent loading trending searches
+      } else if (result.error) {
+        showToast({
+          type: 'error',
+          title: 'OAuth Login Failed',
+          message: result.error
+        });
+      }
+    }
+    
+    // Check if user is authenticated (after OAuth callback processing)
+    const user = AuthService.getCurrentUser();
+    setCurrentUser(user);
     
     // Load trending searches
     const loadTrendingSearches = async () => {
@@ -51,8 +78,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
         const searches = await IdeaGeneratorService.getTrendingSearches();
         setTrendingSearches(searches);
         onTrendingSearchesLoad(searches);
-      } catch (error) {
-        console.error('Failed to load trending searches:', error);
+      } catch {
         showToast({
           type: 'error',
           title: 'Failed to load trending ideas',
@@ -129,11 +155,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
   };
 
 
-  const handleIndustrySelect = (selectedIndustry: string) => {
-    setIndustry(selectedIndustry);
+  const handleIndustrySelect = (suggestion: string) => {
+    setIndustry(suggestion);
     setShowIndustrySuggestions(false);
-    goNext();
   };
+
+  // Handle click outside to close suggestions
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (industryInputRef.current && !industryInputRef.current.contains(event.target as Node)) {
+      setShowIndustrySuggestions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showIndustrySuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showIndustrySuggestions, handleClickOutside]);
 
   const handleIndustryKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && industry.trim()) {
@@ -166,41 +210,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     }, 200);
   };
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthLoading(true);
+  const handleOAuthSuccess = () => {
+    setCurrentUser(AuthService.getCurrentUser());
+    setShowAuthModal(false);
     
-    try {
-      if (authMode === 'login') {
-        await AuthService.login({ email: authData.email, password: authData.password });
+    // Proceed with idea generation if form is valid
+    if (isFormValid) {
+      let naturalPrompt = '';
+      
+      if (businessIdea.trim()) {
+        naturalPrompt = `I want to start a business in ${industry}: ${businessIdea}`;
       } else {
-        await AuthService.register({ name: authData.name, email: authData.email, password: authData.password });
+        naturalPrompt = `I want to start a business in ${industry}`;
       }
       
-      setCurrentUser(AuthService.getCurrentUser());
-      setShowAuthModal(false);
-      setAuthData({ name: '', email: '', password: '' });
-      
-      // Proceed with idea generation if form is valid
-      if (isFormValid) {
-        let naturalPrompt = '';
-        
-        if (businessIdea.trim()) {
-          naturalPrompt = `I want to start a business in ${industry}: ${businessIdea}`;
-        } else {
-          naturalPrompt = `I want to start a business in ${industry}`;
-        }
-        
-        onGenerateIdeas(naturalPrompt);
-      }
-    } catch (error) {
-      showToast({
-        type: 'error',
-        title: `${authMode === 'login' ? 'Login' : 'Registration'} failed`,
-        message: error instanceof Error ? error.message : 'An unexpected error occurred'
-      });
-    } finally {
-      setAuthLoading(false);
+      onGenerateIdeas(naturalPrompt);
     }
   };
 
@@ -240,7 +264,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
               )}
               {currentUser ? (
                 <>
-                  <span className="hidden sm:block text-gray-600">Hi, {currentUser.name.split(' ')[0]}!</span>
+                  <span className="text-gray-600 text-sm md:text-base">Hi, {currentUser.name.split(' ')[0]}!</span>
                   <button
                     onClick={handleLogout}
                     className="px-3 py-2 text-sm md:text-base text-gray-700 hover:text-gray-900"
@@ -251,16 +275,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
               ) : (
                 <>
                   <button
-                    onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}
-                    className="px-3 py-2 text-sm md:text-base text-purple-700 hover:text-purple-900"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}
+                    onClick={() => setShowAuthModal(true)}
                     className="px-3 py-2 rounded-lg bg-purple-600 text-white text-sm md:text-base hover:bg-purple-700 shadow-sm"
                   >
-                    Sign Up
+                    Sign In
                   </button>
                 </>
               )}
@@ -302,35 +320,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
                     <h3 className="text-base font-semibold text-gray-800">Which industry or area interests you?</h3>
                   </div>
 
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={industry}
-                      onChange={(e) => {
-                        setIndustry(e.target.value);
-                        setShowIndustrySuggestions(e.target.value.length > 0);
-                      }}
-                      onFocus={() => setShowIndustrySuggestions(true)}
-                      onKeyPress={handleIndustryKeyPress}
-                      placeholder="e.g., Healthcare, Technology, E-commerce... (Press Enter to continue)"
-                      className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all duration-300 outline-none"
-                      disabled={isLoading}
-                    />
-                    {industry && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIndustry('');
-                          setShowIndustrySuggestions(true);
+                  <div className="relative" ref={industryInputRef}>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={industry}
+                        onChange={(e) => {
+                          setIndustry(e.target.value);
+                          setShowIndustrySuggestions(e.target.value.length > 0);
                         }}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Clear selection"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+                        onFocus={() => setShowIndustrySuggestions(true)}
+                        onKeyPress={handleIndustryKeyPress}
+                        placeholder="e.g., Healthcare, Technology, E-commerce... (Press Enter to continue)"
+                        className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all duration-300 outline-none"
+                        disabled={isLoading}
+                      />
+                      {industry && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIndustry('');
+                            setShowIndustrySuggestions(true);
+                          }}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-20"
+                          title="Clear selection"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                     {showIndustrySuggestions && (
-                      <div className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
                         {INDUSTRY_SUGGESTIONS
                           .filter(suggestion => industry === '' || suggestion.toLowerCase().includes(industry.toLowerCase()))
                           .map((suggestion, index) => (
@@ -434,7 +454,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
         </div>
 
         {/* Trending Ideas Section */}
-        <div className={`max-w-6xl mx-auto transition-all duration-300 ${showIndustrySuggestions ? 'mt-16 md:mt-20' : 'mt-10 md:mt-16'}`}>
+        <div className={`max-w-6xl mx-auto transition-all duration-300 ${showIndustrySuggestions ? 'mt-40 md:mt-45' : 'mt-10 md:mt-16'}`}>
           <div className="flex justify-center mb-6 md:mb-10">
             <div className="max-w-md">
               <TrendingInsights 
@@ -482,69 +502,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
           </div>
         </div>
         
-        {/* Auth Modal */}
+        {/* Auth Modal - OAuth Only */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
               <h2 className="text-2xl font-bold text-center mb-6">
-                {authMode === 'login' ? 'Login' : 'Create Account'}
+                Sign In to Continue
               </h2>
               
-              <form onSubmit={handleAuth} className="space-y-4">
-                {authMode === 'register' && (
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={authData.name}
-                    onChange={(e) => setAuthData({ ...authData, name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  />
-                )}
-                
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={authData.email}
-                  onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                />
-                
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={authData.password}
-                  onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                />
-                
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAuthModal(false)}
-                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    type="submit"
-                    disabled={authLoading}
-                    className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                  >
-                    {authLoading ? 'Loading...' : (authMode === 'login' ? 'Login' : 'Sign Up')}
-                  </button>
-                </div>
-              </form>
+              {/* OAuth Buttons */}
+              <OAuthButtons 
+                onSuccess={handleOAuthSuccess}
+                onError={(error) => {
+                  showToast({
+                    type: 'error',
+                    title: 'OAuth Login Failed',
+                    message: error
+                  });
+                }}
+              />
               
-              <div className="text-center mt-4">
+              <div className="text-center mt-6">
                 <button
-                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  className="text-purple-600 hover:text-purple-800 transition-colors"
+                  onClick={() => setShowAuthModal(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  {authMode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Login'}
+                  Cancel
                 </button>
               </div>
             </div>
