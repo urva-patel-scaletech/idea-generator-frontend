@@ -531,15 +531,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
         </div>
 
         {/* Trending Ideas Section */}
-        <div className={`max-w-6xl mx-auto transition-all duration-300 ${showIndustrySuggestions ? 'mt-40 md:mt-45' : 'mt-10 md:mt-16'}`}>
+        <div
+          className={`max-w-6xl mx-auto transition-all duration-300 ${showIndustrySuggestions ? 'mt-40 md:mt-45' : 'mt-10 md:mt-16'} ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}
+          aria-busy={isLoading}
+        >
           <div className="flex justify-center mb-6 md:mb-10">
             <div className="max-w-md">
               <TrendingInsights 
                 trendingSearches={trendingSearches} 
-                onTrendingClick={(trend) => {
+                onTrendingClick={async (trend) => {
+                  // Set the form values
                   setIndustry(trend.title);
                   setBusinessIdea(trend.description);
-                  setStep(2);
+                  
+                  // Create natural language prompt and generate ideas directly
+                  const naturalPrompt = `I want to start a business in ${trend.title}: ${trend.description}`;
+                  
+                  try {
+                    await onGenerateIdeas(naturalPrompt);
+                  } catch (error: unknown) {
+                    // Extract error message from the error object
+                    let errorMessage = 'Failed to generate ideas. Please try again.';
+                    
+                    if (error instanceof Error) {
+                      errorMessage = error.message;
+                    } else if (typeof error === 'string') {
+                      errorMessage = error;
+                    }
+                    
+                    showToast({
+                      type: 'error',
+                      title: 'Generation Failed',
+                      message: errorMessage,
+                      duration: 5000
+                    });
+                  }
                 }}
               />
             </div>
