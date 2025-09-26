@@ -1,22 +1,31 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { ResultsSection } from './components/ResultsSection';
 import { HistoryPage } from './components/HistoryPage';
 import { IdeaDetailsPage } from './components/IdeaDetailsPage';
+import { SharedIdeaPage } from './components/SharedIdeaPage';
 import { RefineModal } from './components/RefineModal';
 import { UpgradeModal } from './components/UpgradeModal';
 import { ToastProvider } from './components/Toast';
-import { IdeaGeneratorService } from './services/apiService';
+import { IdeaGeneratorService, GenerateService } from './services/apiService';
 import { useUserLimits } from './hooks/useUserLimits';
 import { BusinessIdea, RefineOption } from './types';
 
-type AppState = 'landing' | 'results' | 'history' | 'idea-details';
+type AppState = 'landing' | 'results' | 'history' | 'idea-details' | 'shared';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing');
   const [ideas, setIdeas] = useState<BusinessIdea[]>([]);
   const [currentIndustry, setCurrentIndustry] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check for shared URL on app load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('data')) {
+      setAppState('shared');
+    }
+  }, []);
   
   // Idea details state
   const [selectedThreadId, setSelectedThreadId] = useState<string>('');
@@ -101,13 +110,16 @@ function App() {
     }
   };
 
-  const handleSaveIdea = () => {
-    // Will be implemented with proper toast notifications
+  const handleSaveIdea = async (idea: BusinessIdea) => {
+    try {
+      const threadId = IdeaGeneratorService.getCurrentThreadId();
+      if (!threadId) throw new Error('Missing thread id');
+      await GenerateService.saveIdea(threadId, idea.id);
+    } catch (e) {
+      console.error('Failed to save idea', e);
+    }
   };
 
-  const handleShareIdea = () => {
-    // Will be implemented with proper toast notifications
-  };
 
   const handleBackToLanding = () => {
     setAppState('landing');
@@ -159,6 +171,8 @@ function App() {
           threadId={selectedThreadId}
           selectedIdeaId={selectedIdeaId}
         />
+      ) : appState === 'shared' ? (
+        <SharedIdeaPage onNavigateToLanding={handleBackToLanding} />
       ) : (
         <ResultsSection
           ideas={ideas}
@@ -166,7 +180,6 @@ function App() {
           onBack={handleBackToLanding}
           onRefine={handleRefineIdea}
           onSave={handleSaveIdea}
-          onShare={handleShareIdea}
           canRefine={canRefine}
         />
       )}

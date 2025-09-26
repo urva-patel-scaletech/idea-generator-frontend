@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Lightbulb, Clock, TrendingUp, Sparkles, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Lightbulb, Clock, TrendingUp, Sparkles, Share2 } from 'lucide-react';
 import { GenerateService } from '../services/apiService';
 import { BusinessIdea, Thread } from '../types';
 import { useToast } from './Toast';
+import { ShareModal } from './ShareModal';
 
 interface IdeaDetailsPageProps {
   onBack: () => void;
@@ -29,6 +30,7 @@ export const IdeaDetailsPage: React.FC<IdeaDetailsPageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<BusinessIdea | null>(null);
   const [refinements, setRefinements] = useState<RefinementItem[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     const loadThreadDetails = async () => {
@@ -182,18 +184,25 @@ export const IdeaDetailsPage: React.FC<IdeaDetailsPageProps> = ({
                 {selectedIdea.description || 'No description available'}
               </p>
               
-              {selectedIdea.score && (
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full font-medium">
-                    Score: {selectedIdea.score}/10
-                  </div>
-                  {selectedIdea.complexity && (
-                    <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-medium capitalize">
-                      {selectedIdea.complexity}
+                  {selectedIdea.score && (
+                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full font-medium">
+                      Score: {selectedIdea.score}/10
                     </div>
                   )}
                 </div>
-              )}
+                
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium
+                           bg-blue-100 text-blue-700 hover:bg-blue-200 hover:scale-105
+                           transition-all duration-200"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>Share</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -243,6 +252,15 @@ export const IdeaDetailsPage: React.FC<IdeaDetailsPageProps> = ({
               This idea hasn't been refined with additional details yet.
             </p>
           </div>
+        )}
+
+        {/* Share Modal */}
+        {selectedIdea && (
+          <ShareModal
+            idea={selectedIdea}
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+          />
         )}
       </div>
     </div>

@@ -152,10 +152,23 @@ export interface BusinessIdea {
   title: string;
   description: string;
   industry?: string;
-  marketScore?: number; // 1-10 scale
+  marketScore?: number; // 1-10 scale (legacy)
   trendDirection?: 'up' | 'down' | 'stable';
   searchVolume?: string;
-  score?: number;
+  score: number; // Overall viability score (1-10)
+  growthPercentage: number; // Market growth potential (0-100%)
+  searchData?: {
+    monthlyVolume: number; // e.g., 15000
+    timeframe: string; // e.g., "last month", "past 30 days"
+    trend: 'rising' | 'falling' | 'stable'; // search trend direction
+    relatedTerms?: string[]; // related search terms
+  };
+  metrics: {
+    marketSize: number; // 1-10
+    competition: number; // 1-10 (1=saturated, 10=blue ocean)
+    feasibility: number; // 1-10
+    profitability: number; // 1-10
+  };
 }
 
 export interface RefineOption {

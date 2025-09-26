@@ -15,11 +15,20 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onBack, onViewIdea }) 
   const [isLoading, setIsLoading] = useState(true);
   const [totalStats, setTotalStats] = useState({ totalThreads: 0, totalIdeas: 0 });
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
+  const [showSavedOnly, setShowSavedOnly] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+
+  // Debounce search input to avoid excessive reloads and focus loss
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const loadHistory = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await GenerateService.getUserHistory();
+      const response = await GenerateService.getUserHistory(showSavedOnly, debouncedSearch);
       
       // Handle nested response structure from backend
       const historyData: UserHistoryData = 'data' in response.data 
@@ -42,7 +51,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onBack, onViewIdea }) 
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, showSavedOnly, debouncedSearch]);
 
   useEffect(() => {
     loadHistory();
@@ -75,20 +84,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onBack, onViewIdea }) 
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading your idea history...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Do not fully unmount the page on loading; keep input focused
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
@@ -108,6 +104,35 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onBack, onViewIdea }) 
               <Lightbulb className="w-8 h-8 text-purple-600" />
               <span>Your Ideas</span>
             </h1>
+          </div>
+          {/* Actions: Search + Saved Filter Toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your ideas..."
+              className="w-56 md:w-72 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            {isLoading && (
+              <div className="flex items-center gap-2 text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+              </div>
+            )}
+            <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+              <button
+                onClick={() => setShowSavedOnly(false)}
+                className={`px-3 py-1 rounded-md text-sm font-medium ${!showSavedOnly ? 'bg-purple-600 text-white' : 'text-gray-700'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setShowSavedOnly(true)}
+                className={`px-3 py-1 rounded-md text-sm font-medium ${showSavedOnly ? 'bg-purple-600 text-white' : 'text-gray-700'}`}
+              >
+                Saved
+              </button>
+            </div>
           </div>
         </div>
 

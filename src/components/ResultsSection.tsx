@@ -8,8 +8,7 @@ interface ResultsSectionProps {
   industry: string;
   onBack: () => void;
   onRefine: (idea: BusinessIdea) => void;
-  onSave: () => void;
-  onShare: () => void;
+  onSave: (idea: BusinessIdea) => void;
   canRefine: boolean;
 }
 
@@ -19,7 +18,6 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   onBack,
   onRefine,
   onSave,
-  onShare,
   canRefine,
 }) => {
 
@@ -27,23 +25,29 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   const displayIndustry = useMemo(() => {
     if (!industry) return '';
     const raw = industry.trim();
-    // 1) Pattern: "in <industry> to|:|$" (e.g., "in Travel & Tourism to ...")
-    const inMatch = raw.match(/\bin\s+([^:]+?)(?=\s+to\b|:|$)/i);
+    
+    // New pattern: "I want to start a business in <industry> with a budget..." 
+    // Extract just the industry part, ignoring filters
+    const businessInMatch = raw.match(/\bstart\s+a\s+business\s+in\s+([^,]+?)(?:\s+with\s+a\s+budget|,|$)/i);
+    if (businessInMatch?.[1]) return businessInMatch[1].trim();
+    
+    // Pattern: "in <industry> to|:|$" (e.g., "in Travel & Tourism to ...")
+    const inMatch = raw.match(/\bin\s+([^:,]+?)(?=\s+with\s+a\s+budget|\s+focusing|\s+leveraging|,|:|$)/i);
     if (inMatch?.[1]) return inMatch[1].trim();
 
-    // 2) Pattern: "into a/an/the <industry> business" (e.g., "into a Travel & Tourism business")
-    const intoBusinessMatch = raw.match(/\binto\s+(?:an?\s+|the\s+)?([^:]+?)\s+business\b/i);
+    // Pattern: "into a/an/the <industry> business" (e.g., "into a Travel & Tourism business")
+    const intoBusinessMatch = raw.match(/\binto\s+(?:an?\s+|the\s+)?([^:,]+?)\s+business\b/i);
     if (intoBusinessMatch?.[1]) return intoBusinessMatch[1].trim();
 
-    // 3) Pattern: "to start a/an/the <industry> business"
-    const toStartBusinessMatch = raw.match(/\bto\s+start\s+(?:an?\s+|the\s+)?([^:]+?)\s+business\b/i);
+    // Pattern: "to start a/an/the <industry> business"
+    const toStartBusinessMatch = raw.match(/\bto\s+start\s+(?:an?\s+|the\s+)?([^:,]+?)\s+business\b/i);
     if (toStartBusinessMatch?.[1]) return toStartBusinessMatch[1].trim();
 
-    // 4) Generic: "a/an/the <industry> business" if present anywhere
-    const aBusinessMatch = raw.match(/\b(?:an?|the)\s+([^:]+?)\s+business\b/i);
+    // Generic: "a/an/the <industry> business" if present anywhere
+    const aBusinessMatch = raw.match(/\b(?:an?|the)\s+([^:,]+?)\s+business\b/i);
     if (aBusinessMatch?.[1]) return aBusinessMatch[1].trim();
 
-    // 5) If there's a colon, try to use the segment right before the colon,
+    // If there's a colon, try to use the segment right before the colon,
     // but strip common leading phrases like "I want to", "I see", etc.
     if (raw.includes(':')) {
       const beforeColon = raw.split(':')[0]
@@ -58,7 +62,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
       return beforeColon || raw.split(':')[0].trim();
     }
 
-    // 6) Fallback: if it's very long, truncate safely; otherwise return as-is
+    // Fallback: if it's very long, truncate safely; otherwise return as-is
     return raw.length > 36 ? raw.slice(0, 34).trim() + '…' : raw;
   }, [industry]);
 
@@ -112,8 +116,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                 key={idea.id}
                 idea={idea}
                 onRefine={onRefine}
-                onSave={onSave}
-                onShare={onShare}
+                onSave={(i) => onSave(i)}
                 canRefine={canRefine}
               />
             ))}

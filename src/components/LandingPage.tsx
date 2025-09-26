@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Lightbulb, ChevronDown, ChevronRight, HelpCircle, History, X } from 'lucide-react';
 import { TrendingInsights } from './TrendingInsights';
 import { OAuthButtons } from './OAuthButtons';
+import { FilterStep, FilterOptions } from './FilterStep';
 import { IdeaGeneratorService, AuthService } from '../services/apiService';
 import { useToast } from './Toast';
 import { User, TrendingIdea } from '../types';
@@ -23,12 +24,13 @@ const INDUSTRY_SUGGESTIONS = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoading, onTrendingSearchesLoad, onViewHistory }) => {
   const { showToast } = useToast();
-  // Mobile-first step controller - now starts at step 1 (industry) instead of business type
-  const [step, setStep] = useState<1 | 2>(1);
+  // Mobile-first step controller - now includes filters step
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [anim, setAnim] = useState<'idle' | 'in' | 'out'>('idle');
   const [animDir, setAnimDir] = useState<'left' | 'right'>('right');
   const [industry, setIndustry] = useState('');
   const [businessIdea, setBusinessIdea] = useState('');
+  const [filters, setFilters] = useState<FilterOptions>({ budget: '', location: '', skills: [] });
   const [showIndustrySuggestions, setShowIndustrySuggestions] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
   const [trendingSearches, setTrendingSearches] = useState<TrendingIdea[]>([]);
@@ -119,13 +121,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     
     // Anonymous users are now supported - no authentication required
     
-    // Create a natural language prompt that the backend can parse
+    // Create a natural language prompt that includes filters
     let naturalPrompt = '';
     
+    // Build base prompt
     if (businessIdea.trim()) {
       naturalPrompt = `I want to start a business in ${industry}: ${businessIdea}`;
     } else {
       naturalPrompt = `I want to start a business in ${industry}`;
+    }
+    
+    // Add filter context
+    const filterContext = [];
+    if (filters.budget) {
+      const budgetLabels = {
+        'under-1k': 'with a budget under $1,000',
+        '1k-5k': 'with a budget between $1,000-$5,000',
+        '5k-25k': 'with a budget between $5,000-$25,000',
+        '25k-100k': 'with a budget between $25,000-$100,000',
+        'over-100k': 'with a budget over $100,000'
+      };
+      filterContext.push(budgetLabels[filters.budget as keyof typeof budgetLabels]);
+    }
+    
+    if (filters.location) {
+      const locationLabels = {
+        'local': 'focusing on local/physical business',
+        'online': 'focusing on online/digital business',
+        'hybrid': 'combining online and physical presence'
+      };
+      filterContext.push(locationLabels[filters.location as keyof typeof locationLabels]);
+    }
+    
+    if (filters.skills.length > 0) {
+      filterContext.push(`leveraging skills in: ${filters.skills.join(', ')}`);
+    }
+    
+    if (filterContext.length > 0) {
+      naturalPrompt += ` ${filterContext.join(', ')}`;
     }
     
     try {
@@ -193,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     setAnimDir('right');
     setAnim('out');
     setTimeout(() => {
-      setStep((prev) => (prev === 2 ? 2 : ((prev + 1) as 1 | 2)));
+      setStep((prev) => (prev === 3 ? 3 : ((prev + 1) as 1 | 2 | 3)));
       setAnim('in');
       setTimeout(() => setAnim('idle'), 250);
     }, 200);
@@ -204,7 +237,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     setAnimDir('left');
     setAnim('out');
     setTimeout(() => {
-      setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)));
+      setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2 | 3)));
       setAnim('in');
       setTimeout(() => setAnim('idle'), 250);
     }, 200);
@@ -218,10 +251,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
     if (isFormValid) {
       let naturalPrompt = '';
       
+      // Build prompt with filters for OAuth success
       if (businessIdea.trim()) {
         naturalPrompt = `I want to start a business in ${industry}: ${businessIdea}`;
       } else {
         naturalPrompt = `I want to start a business in ${industry}`;
+      }
+      
+      // Add filter context for OAuth success flow too
+      const filterContext = [];
+      if (filters.budget) {
+        const budgetLabels = {
+          'under-1k': 'with a budget under $1,000',
+          '1k-5k': 'with a budget between $1,000-$5,000',
+          '5k-25k': 'with a budget between $5,000-$25,000',
+          '25k-100k': 'with a budget between $25,000-$100,000',
+          'over-100k': 'with a budget over $100,000'
+        };
+        filterContext.push(budgetLabels[filters.budget as keyof typeof budgetLabels]);
+      }
+      
+      if (filters.location) {
+        const locationLabels = {
+          'local': 'focusing on local/physical business',
+          'online': 'focusing on online/digital business',
+          'hybrid': 'combining online and physical presence'
+        };
+        filterContext.push(locationLabels[filters.location as keyof typeof locationLabels]);
+      }
+      
+      if (filters.skills.length > 0) {
+        filterContext.push(`leveraging skills in: ${filters.skills.join(', ')}`);
+      }
+      
+      if (filterContext.length > 0) {
+        naturalPrompt += ` ${filterContext.join(', ')}`;
       }
       
       onGenerateIdeas(naturalPrompt);
@@ -305,7 +369,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
           </div>
           {/* Progress */}
           <div className="flex items-center justify-center mb-4 gap-2">
-            {[1,2].map((i) => (
+            {[1,2,3].map((i) => (
               <span key={i} className={`h-2 rounded-full transition-all duration-300 ${step >= i ? 'bg-purple-600 w-10' : 'bg-purple-200 w-4'}`}></span>
             ))}
           </div>
@@ -374,8 +438,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGenerateIdeas, isLoa
                 </div>
               )}
 
-              {/* Step 2 - Description (previously Step 3, now optional) */}
+              {/* Step 2 - Filters (Optional) */}
               {step === 2 && (
+                <div className={`${anim === 'out' ? (animDir==='right' ? 'translate-x-6 opacity-0' : '-translate-x-6 opacity-0') : anim==='in' ? 'translate-x-0 opacity-100' : 'opacity-100'} transition-all duration-200`}>
+                  <FilterStep
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onNext={goNext}
+                    onBack={goBack}
+                    isLoading={isLoading}
+                  />
+                </div>
+              )}
+
+              {/* Step 3 - Description (previously Step 2, now optional) */}
+              {step === 3 && (
                 <div className={`bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-purple-100 ${anim === 'out' ? (animDir==='right' ? 'translate-x-6 opacity-0' : '-translate-x-6 opacity-0') : anim==='in' ? 'translate-x-0 opacity-100' : 'opacity-100'} transition-all duration-200`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">

@@ -446,9 +446,13 @@ export class GenerateService {
     }
   }
 
-  static async getUserHistory(): Promise<UserHistoryResponse> {
+  static async getUserHistory(savedOnly?: boolean, q?: string): Promise<UserHistoryResponse> {
     try {
-      const response = await ApiClient.get<UserHistoryResponse>('/generate/history');
+      const params: string[] = [];
+      if (savedOnly) params.push('saved=true');
+      if (q && q.trim()) params.push(`q=${encodeURIComponent(q.trim())}`);
+      const query = params.length ? `?${params.join('&')}` : '';
+      const response = await ApiClient.get<UserHistoryResponse>(`/generate/history${query}`);
       return response;
     } catch (error) {
       console.error('Error fetching user history:', error);
@@ -498,8 +502,21 @@ export class IdeaGeneratorService {
               id: (cardResult.id as string) || `fallback-${Date.now()}`,
               title: (cardResult.title as string) || 'Untitled Idea',
               description: (cardResult.description as string) || 'No description available',
-              score: (cardResult.score as number) || result.score || 7.5,
-              marketScore: (cardResult.score as number) || result.score || 7.5,
+              score: (cardResult.score as number) || 7.5,
+              growthPercentage: (cardResult.growthPercentage as number) || 15,
+              searchData: cardResult.searchData ? {
+                monthlyVolume: ((cardResult.searchData as Record<string, unknown>)?.monthlyVolume as number) || 0,
+                timeframe: ((cardResult.searchData as Record<string, unknown>)?.timeframe as string) || 'past 30 days',
+                trend: ((cardResult.searchData as Record<string, unknown>)?.trend as 'rising' | 'falling' | 'stable') || 'stable',
+                relatedTerms: ((cardResult.searchData as Record<string, unknown>)?.relatedTerms as string[]) || []
+              } : undefined,
+              metrics: {
+                marketSize: ((cardResult.metrics as Record<string, unknown>)?.marketSize as number) || 7,
+                competition: ((cardResult.metrics as Record<string, unknown>)?.competition as number) || 6,
+                feasibility: ((cardResult.metrics as Record<string, unknown>)?.feasibility as number) || 8,
+                profitability: ((cardResult.metrics as Record<string, unknown>)?.profitability as number) || 7
+              },
+              marketScore: (cardResult.score as number) || 7.5, // Keep for backward compatibility
             } as BusinessIdea;
           }
           
@@ -533,8 +550,15 @@ export class IdeaGeneratorService {
             id: (resultWithId.id as string) || `fallback-${Date.now()}`,
             title: (parsedIdea.title as string) || 'Untitled Idea',
             description: (parsedIdea.description as string) || 'No description available',
-            score: result.score ?? (parsedIdea.score as number),
-            marketScore: result.score ?? (parsedIdea.score as number),
+            score: result.score ?? (parsedIdea.score as number) ?? 7.5,
+            growthPercentage: (parsedIdea.growthPercentage as number) ?? 15,
+            metrics: {
+              marketSize: ((parsedIdea.metrics as Record<string, unknown>)?.marketSize as number) ?? 7,
+              competition: ((parsedIdea.metrics as Record<string, unknown>)?.competition as number) ?? 6,
+              feasibility: ((parsedIdea.metrics as Record<string, unknown>)?.feasibility as number) ?? 8,
+              profitability: ((parsedIdea.metrics as Record<string, unknown>)?.profitability as number) ?? 7
+            },
+            marketScore: result.score ?? (parsedIdea.score as number) ?? 7.5,
             complexity: 'simple'
           } as BusinessIdea;
         });
@@ -568,8 +592,15 @@ export class IdeaGeneratorService {
           id: (resultsWithId.id as string) || `fallback-${Date.now()}`,
           title: (parsedIdea.title as string) || 'Untitled Idea',
           description: (parsedIdea.description as string) || 'No description available',
-          score: results.score ?? (parsedIdea.score as number),
-          marketScore: results.score ?? (parsedIdea.score as number),
+          score: results.score ?? (parsedIdea.score as number) ?? 7.5,
+          growthPercentage: (parsedIdea.growthPercentage as number) ?? 15,
+          metrics: {
+            marketSize: ((parsedIdea.metrics as Record<string, unknown>)?.marketSize as number) ?? 7,
+            competition: ((parsedIdea.metrics as Record<string, unknown>)?.competition as number) ?? 6,
+            feasibility: ((parsedIdea.metrics as Record<string, unknown>)?.feasibility as number) ?? 8,
+            profitability: ((parsedIdea.metrics as Record<string, unknown>)?.profitability as number) ?? 7
+          },
+          marketScore: results.score ?? (parsedIdea.score as number) ?? 7.5,
           complexity: 'simple'
         } as BusinessIdea];
       }
